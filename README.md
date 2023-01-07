@@ -17,5 +17,7 @@ This is a Beta version under development and tests
 2. Hover 120px*120px Profile Photo
 ### 0.3.0 Beta
 1. Paid User Role multiselect
+### 0.4.0 Beta
+1. Suffix for Paid Role to Dowgrade Role ID
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
