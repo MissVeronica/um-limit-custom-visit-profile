@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         0.0.5 Beta
+ * Version:         0.1.0 Beta
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -22,14 +22,27 @@ class UM_Limit_Profile_Visits {
 
     public function __construct() {
 
-        add_action( "template_redirect",                          array( $this, "um_limit_custom_visit_profile" ), 99999 );
-        add_filter( 'um_account_content_hook_limit_custom_visit', array( $this, 'um_account_content_hook_limit_custom_visit' ));
-        add_filter( 'um_account_page_default_tabs_hook',          array( $this, 'um_limit_custom_visit_account' ), 100 );
-        add_filter( 'um_settings_structure',                      array( $this, 'um_settings_structure_limit_custom_visit' ), 10, 2 );
+        if( is_admin()) {
+
+            add_filter( 'um_settings_structure',      array( $this, 'um_settings_structure_limit_custom_visit' ), 10, 2 );
+            add_filter( 'manage_users_columns',       array( $this, 'manage_users_columns_limit_custom_visit' ));
+            add_filter( 'manage_users_custom_column', array( $this, 'manage_users_custom_column_limit_custom_visit' ), 10, 3 );
+
+        } else {
+
+            add_action( "template_redirect", array( $this, "um_limit_custom_visit_profile" ), 99999 );
+        }        
     }
 
     public function um_limit_custom_visit_profile() {
 
+        $role = get_role( UM()->roles()->get_priority_user_role( get_current_user_id()) );
+        if ( ! in_array(  $role->name, array( UM()->options()->get( 'um_limit_visit_role_limit' ),
+                                              UM()->options()->get( 'um_limit_visit_role_paid' )))) return;
+        
+        add_filter( 'um_account_content_hook_limit_custom_visit', array( $this, 'um_account_content_hook_limit_custom_visit' ));
+        add_filter( 'um_account_page_default_tabs_hook',          array( $this, 'um_limit_custom_visit_account' ), 100 );
+                          
         if ( ! um_is_myprofile() && um_is_core_page( "user" ) ) {
 
             global $wpdb;
@@ -107,11 +120,16 @@ class UM_Limit_Profile_Visits {
                 $total_visited++;            
 
                 if ( $total_visited > $limit ) { // this visit will be past the limit
+
                     $redirect_limit = UM()->options()->get( 'um_limit_visit_user_redirect' );
                     if( empty( $redirect_limit )) {
                         $redirect_limit = home_url();
                     }
-                    wp_redirect( $redirect_limit ); 
+
+                    $role_limit = sanitize_key( UM()->options()->get( 'um_limit_visit_role_limit' ));
+                    UM()->roles()->set_role( $user_id, $role_limit );
+ 
+                    wp_redirect( esc_url( $redirect_limit )); 
                     exit;
                 }
 
@@ -191,7 +209,7 @@ class UM_Limit_Profile_Visits {
                                     <div style="display: table-cell;  text-align: center;" title="order number">' . esc_attr( $customer_order ) . '</div>
                                     <div style="display: table-cell;  text-align: center;" title="quantity">' . esc_attr( $item->get_quantity()) . '</div>
                                     <div style="display: table-cell;  text-align: center;" title="visit limit">' . esc_attr( $limit ) . '</div>
-                                    <div style="display: table-cell;  text-align: left;"   title="product">' . esc_attr( $item->get_name()) . '</div>
+                                    <div style="display: table-cell;  text-align: left;"   title="product link"><a href="' . get_permalink( wc_get_page_id( 'shop' ) ) . '" target="_blank">' . esc_attr( $item->get_name()) . '</a></div>
                                     </div>';
                     }
                 }
@@ -206,17 +224,26 @@ class UM_Limit_Profile_Visits {
                                                                         ORDER BY visited_date DESC LIMIT 12", $current_user->ID ) );
         $output .= '<h4>Visit history</h4>';
 
-        if( !empty( $visits )) {
+        if( ! empty( $visits )) {
             
             $output .= '<div style="display: table; width: 90%;">';
             foreach( $visits as $visit ) {
 
                 um_fetch_user( $visit->visited_user_id );
 
+                if( !empty( um_profile( 'profile_photo' ))) {
+                    $profile_photo = '<a href="' . esc_url( um_user_profile_url() ) . '" target="_blank">
+                                      <img src="' . UM()->uploader()->get_upload_base_url() . um_user( 'ID' ) . "/" . um_profile( 'profile_photo' ) . '" width="40" heght="40">
+                                      </a>';
+                } else {
+                    $profile_photo = '';
+                }
+
                 $output .= '<div style="display: table-row; width: 100%;">
                             <div style="display: table-cell; text-align: left;" title="date">' . esc_attr( $visit->visited_date ) . '</div>
                             <div style="display: table-cell; text-align: left; padding-left: 10px;" title="display name">
                             <a href="' . esc_url( um_user_profile_url() ) . '" target="_blank">' . esc_attr( um_user( 'display_name' ) ) . '</a></div>
+                            <div style="display: table-cell;">' . $profile_photo . '</div>
                             </div>';
             }
 
@@ -229,23 +256,43 @@ class UM_Limit_Profile_Visits {
         return $output;
     }
 
-    function um_settings_structure_limit_custom_visit( $settings_structure ) {
+    public function um_settings_structure_limit_custom_visit( $settings_structure ) {
 
         $settings_structure['access']['sections']['other']['fields'][] = array(
                 'id'            => 'um_limit_visit_user_products',
                 'type'          => 'text',
                 'label'         => __( 'Limit Profile Visits - WooCommerce Product IDs', 'ultimate-member' ),
                 'size'          => 'medium',
-                'tooltip'       => __( 'Comma separated WooCommerce product IDs where there is an attribute with name "um_view_profile_limit" and its value is an integer number of visits allowed', 'ultimate-member' )
+                'tooltip'       => __( 'Comma separated WooCommerce product IDs where there is an attribute with name "um_view_profile_limit" and its value is an integer number of visits allowed.', 'ultimate-member' )
                 );
     
+        $settings_structure['access']['sections']['other']['fields'][] = array(
+                'id'            => 'um_limit_visit_role_paid',
+                'type'          => 'select',
+                'options'       => UM()->roles()->get_roles(),
+                'label'         => __( 'Limit Profile Visits - Paid User Role', 'ultimate-member' ),
+                'size'          => 'small',
+                'tooltip'       => __( 'Paid User Role when profile is active after purchase.', 'ultimate-member' )
+                );
+
         $settings_structure['access']['sections']['other']['fields'][] = array(
                 'id'            => 'um_limit_visit_user_redirect',
                 'type'          => 'text',
                 'label'         => __( 'Limit Profile Visits - Redirect URL', 'ultimate-member' ),
                 'size'          => 'medium',
-                'tooltip'       => __( 'Redirect to URL or /page when profile visits equals user limit (empty field = Homepage)', 'ultimate-member' )
+                'tooltip'       => __( 'Redirect to URL or /page when profile visits equals user limit (empty field = Homepage).', 'ultimate-member' )
                 );
+
+        $settings_structure['access']['sections']['other']['fields'][] = array(
+                'id'            => 'um_limit_visit_role_limit',
+                'type'          => 'select',
+                'options'       => UM()->roles()->get_roles(),
+                'label'         => __( 'Limit Profile Visits - Downgrade to Role', 'ultimate-member' ),
+                'size'          => 'small',
+                'tooltip'       => __( 'Downgrade to this Role when profile visits equals user limit.', 'ultimate-member' )
+                );
+
+                
 /*    
         $settings_structure['access']['sections']['other']['fields'][] = array(
                 'id'            => 'um_limit_visit_user_revisit',
@@ -255,6 +302,37 @@ class UM_Limit_Profile_Visits {
                 );
 */        
         return $settings_structure;
+    }
+
+    public function manage_users_columns_limit_custom_visit( $columns ) {
+
+        $columns['um_total_visited_profiles'] = __( 'Views', 'ultimate-member' );
+        $columns['um_view_profile_limit'] = __( 'Limit', 'ultimate-member' );
+        return $columns;
+    }
+    
+    public function manage_users_custom_column_limit_custom_visit( $value, $column_name, $user_id ) {
+    
+        if ( $column_name == 'um_total_visited_profiles' ) {
+    
+            um_fetch_user( $user_id );
+            $value = um_user( 'um_total_visited_profiles' );    
+            if( empty( $value )) {
+                $value = 'Never';
+            } 
+            um_reset_user();
+        }
+    
+        if ( $column_name == 'um_view_profile_limit' ) {
+    
+            um_fetch_user( $user_id );
+            $value = um_user( 'um_view_profile_limit' );
+            if( empty( $value )) {
+                $value = '-';
+            } 
+            um_reset_user();
+        }
+        return $value;
     }
 }
 
