@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         0.1.0 Beta
+ * Version:         0.2.0 Beta
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -37,8 +37,10 @@ class UM_Limit_Profile_Visits {
     public function um_limit_custom_visit_profile() {
 
         $role = get_role( UM()->roles()->get_priority_user_role( get_current_user_id()) );
+
         if ( ! in_array(  $role->name, array( UM()->options()->get( 'um_limit_visit_role_limit' ),
-                                              UM()->options()->get( 'um_limit_visit_role_paid' )))) return;
+                                              UM()->options()->get( 'um_limit_visit_role_paid' ),
+                                              UM()->options()->get( 'um_limit_visit_role_paid_2' )))) return;
         
         add_filter( 'um_account_content_hook_limit_custom_visit', array( $this, 'um_account_content_hook_limit_custom_visit' ));
         add_filter( 'um_account_page_default_tabs_hook',          array( $this, 'um_limit_custom_visit_account' ), 100 );
@@ -96,11 +98,12 @@ class UM_Limit_Profile_Visits {
 
                 $select =  "SELECT count(*) AS revisits FROM {$wpdb->prefix}custom_visited_profiles 
                             WHERE user_id = %d  
-                            AND visited_user_id = %d";
+                            AND visited_user_id = %d
+                            AND visited_date >= %s";
+
                 $date_limit = '2000-01-01 00:00:00';
 
                 if ( $revisit_hours ) {
-                    $select .= " AND visited_date >= %s";
                     $date_limit = date( 'Y-m-d H:i:s', time() - 3600*$revisit_hours );
                 }
 
@@ -226,14 +229,16 @@ class UM_Limit_Profile_Visits {
 
         if( ! empty( $visits )) {
             
-            $output .= '<div style="display: table; width: 90%;">';
+            $output .= '<div style="display: table; width: 90%;">
+                        <style>img.hoverimg:hover,img.hoverimg:focus {width: 120px; height: 120px;}</style>';
+
             foreach( $visits as $visit ) {
 
                 um_fetch_user( $visit->visited_user_id );
 
                 if( !empty( um_profile( 'profile_photo' ))) {
                     $profile_photo = '<a href="' . esc_url( um_user_profile_url() ) . '" target="_blank">
-                                      <img src="' . UM()->uploader()->get_upload_base_url() . um_user( 'ID' ) . "/" . um_profile( 'profile_photo' ) . '" width="40" heght="40">
+                                      <img class="hoverimg" src="' . UM()->uploader()->get_upload_base_url() . um_user( 'ID' ) . "/" . um_profile( 'profile_photo' ) . '" width="40" heght="40">
                                       </a>';
                 } else {
                     $profile_photo = '';
@@ -243,7 +248,7 @@ class UM_Limit_Profile_Visits {
                             <div style="display: table-cell; text-align: left;" title="date">' . esc_attr( $visit->visited_date ) . '</div>
                             <div style="display: table-cell; text-align: left; padding-left: 10px;" title="display name">
                             <a href="' . esc_url( um_user_profile_url() ) . '" target="_blank">' . esc_attr( um_user( 'display_name' ) ) . '</a></div>
-                            <div style="display: table-cell;">' . $profile_photo . '</div>
+                            <div style="display: table-cell;width:120px">' . $profile_photo . '</div>
                             </div>';
             }
 
@@ -270,7 +275,16 @@ class UM_Limit_Profile_Visits {
                 'id'            => 'um_limit_visit_role_paid',
                 'type'          => 'select',
                 'options'       => UM()->roles()->get_roles(),
-                'label'         => __( 'Limit Profile Visits - Paid User Role', 'ultimate-member' ),
+                'label'         => __( 'Limit Profile Visits - Paid User Role 1', 'ultimate-member' ),
+                'size'          => 'small',
+                'tooltip'       => __( 'Paid User Role when profile is active after purchase.', 'ultimate-member' )
+                );
+    
+        $settings_structure['access']['sections']['other']['fields'][] = array(
+                'id'            => 'um_limit_visit_role_paid_2',
+                'type'          => 'select',
+                'options'       => UM()->roles()->get_roles(),
+                'label'         => __( 'Limit Profile Visits - Paid User Role 2', 'ultimate-member' ),
                 'size'          => 'small',
                 'tooltip'       => __( 'Paid User Role when profile is active after purchase.', 'ultimate-member' )
                 );
