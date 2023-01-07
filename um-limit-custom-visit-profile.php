@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         0.3.0 Beta
+ * Version:         0.4.0 Beta
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -39,7 +39,21 @@ class UM_Limit_Profile_Visits {
         $role = get_role( UM()->roles()->get_priority_user_role( get_current_user_id()) );
 
         $limited_roles = UM()->options()->get( 'um_limit_visit_role_paid' );
-        array_push( $limited_roles, UM()->options()->get( 'um_limit_visit_role_limit' ));
+        if( empty( UM()->options()->get( 'um_limit_visit_role_suffix' ) )) {
+
+            array_push( $limited_roles, UM()->options()->get( 'um_limit_visit_role_limit' ));
+
+        } else {
+
+            $downgrade = array();
+            $suffix = UM()->options()->get( 'um_limit_visit_role_suffix' );
+
+            foreach( $limited_roles as $gold_role ) {
+                array_push( $downgrade, $gold_role . $suffix );
+            }
+
+            $limited_roles = array_merge( $limited_roles, $downgrade );
+        }
 
         if ( ! in_array(  $role->name, $limited_roles )) return;
 
@@ -294,9 +308,17 @@ class UM_Limit_Profile_Visits {
                 'id'            => 'um_limit_visit_role_limit',
                 'type'          => 'select',
                 'options'       => UM()->roles()->get_roles(),
-                'label'         => __( 'Limit Profile Visits - Downgrade to Role', 'ultimate-member' ),
+                'label'         => __( 'Limit Profile Visits - Downgrade to single Role', 'ultimate-member' ),
                 'size'          => 'small',
                 'tooltip'       => __( 'Downgrade to this Role when profile visits equals user limit.', 'ultimate-member' )
+                );
+
+        $settings_structure['access']['sections']['other']['fields'][] = array(
+                'id'            => 'um_limit_visit_role_suffix',
+                'type'          => 'text',
+                'label'         => __( 'Limit Profile Visits - Downgrade Role Suffix', 'ultimate-member' ),
+                'size'          => 'medium',
+                'tooltip'       => __( 'Downgrade to the Role ID with this suffix to the Paid Role when profile visits equals user limit. Empty field use single Role selection.', 'ultimate-member' )
                 );
 
                 
