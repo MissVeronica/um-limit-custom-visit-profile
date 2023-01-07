@@ -12,6 +12,8 @@ This is a Beta version under development and tests
 3. Only Paid and Downgrade roles are included in the Limit Visit Profile
 4. Addition of linked profile photos on Account Page.
 5. Downgrade the user role at redirect to limit page
-
+### 0.2.0 Beta 
+1. Second Paid User Role
+2. Hover 120px*120px Profile Photo
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
