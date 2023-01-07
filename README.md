@@ -15,5 +15,7 @@ This is a Beta version under development and tests
 ### 0.2.0 Beta 
 1. Second Paid User Role
 2. Hover 120px*120px Profile Photo
+### 0.3.0 Beta
+1. Paid User Role multiselect
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
