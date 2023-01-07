@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         0.2.0 Beta
+ * Version:         0.3.0 Beta
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -38,10 +38,11 @@ class UM_Limit_Profile_Visits {
 
         $role = get_role( UM()->roles()->get_priority_user_role( get_current_user_id()) );
 
-        if ( ! in_array(  $role->name, array( UM()->options()->get( 'um_limit_visit_role_limit' ),
-                                              UM()->options()->get( 'um_limit_visit_role_paid' ),
-                                              UM()->options()->get( 'um_limit_visit_role_paid_2' )))) return;
-        
+        $limited_roles = UM()->options()->get( 'um_limit_visit_role_paid' );
+        array_push( $limited_roles, UM()->options()->get( 'um_limit_visit_role_limit' ));
+
+        if ( ! in_array(  $role->name, $limited_roles )) return;
+
         add_filter( 'um_account_content_hook_limit_custom_visit', array( $this, 'um_account_content_hook_limit_custom_visit' ));
         add_filter( 'um_account_page_default_tabs_hook',          array( $this, 'um_limit_custom_visit_account' ), 100 );
                           
@@ -274,17 +275,9 @@ class UM_Limit_Profile_Visits {
         $settings_structure['access']['sections']['other']['fields'][] = array(
                 'id'            => 'um_limit_visit_role_paid',
                 'type'          => 'select',
+                'multi'         => true,
                 'options'       => UM()->roles()->get_roles(),
-                'label'         => __( 'Limit Profile Visits - Paid User Role 1', 'ultimate-member' ),
-                'size'          => 'small',
-                'tooltip'       => __( 'Paid User Role when profile is active after purchase.', 'ultimate-member' )
-                );
-    
-        $settings_structure['access']['sections']['other']['fields'][] = array(
-                'id'            => 'um_limit_visit_role_paid_2',
-                'type'          => 'select',
-                'options'       => UM()->roles()->get_roles(),
-                'label'         => __( 'Limit Profile Visits - Paid User Role 2', 'ultimate-member' ),
+                'label'         => __( 'Limit Profile Visits - Paid User Role', 'ultimate-member' ),
                 'size'          => 'small',
                 'tooltip'       => __( 'Paid User Role when profile is active after purchase.', 'ultimate-member' )
                 );
