@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         0.4.0 Beta
+ * Version:         0.4.5 Beta
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -144,8 +144,14 @@ class UM_Limit_Profile_Visits {
                         $redirect_limit = home_url();
                     }
 
-                    $role_limit = sanitize_key( UM()->options()->get( 'um_limit_visit_role_limit' ));
-                    UM()->roles()->set_role( $user_id, $role_limit );
+                    if( empty( UM()->options()->get( 'um_limit_visit_role_suffix' ) )) {
+                        $role_limit = UM()->options()->get( 'um_limit_visit_role_limit' );
+                    } else {
+                        $role = get_role( UM()->roles()->get_priority_user_role( get_current_user_id()) );
+                        $role_limit = $role->name . UM()->options()->get( 'um_limit_visit_role_suffix' ); 
+                    }
+
+                    UM()->roles()->set_role( $user_id, sanitize_key( $role_limit ));
  
                     wp_redirect( esc_url( $redirect_limit )); 
                     exit;
