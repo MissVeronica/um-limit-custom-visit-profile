@@ -26,5 +26,7 @@ This is a Beta version under development and tests
 1. Paid User Role multiselect
 ### 0.4.0 Beta
 1. Additional option with Suffix for Paid Role ID to Downgrade Role ID
+### 0.4.5 Beta
+1. Bug fix 
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
