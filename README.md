@@ -28,5 +28,8 @@ This is a Beta version under development and tests
 1. Additional option with Suffix for Paid Role ID to Downgrade Role ID
 ### 0.4.5 Beta
 1. Bug fix 
+### 0.5.0 Beta
+1. Bug fix with -unpaid
+2. User role name added to Account page
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
