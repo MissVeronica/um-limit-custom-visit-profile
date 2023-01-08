@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         0.4.5 Beta
+ * Version:         0.5.0 Beta
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -143,16 +143,27 @@ class UM_Limit_Profile_Visits {
                     if( empty( $redirect_limit )) {
                         $redirect_limit = home_url();
                     }
+                    
+                    $suffix = UM()->options()->get( 'um_limit_visit_role_suffix' );
+                    $role = get_role( UM()->roles()->get_priority_user_role( get_current_user_id()) );
 
-                    if( empty( UM()->options()->get( 'um_limit_visit_role_suffix' ) )) {
-                        $role_limit = UM()->options()->get( 'um_limit_visit_role_limit' );
+                    if ( ! empty( $suffix )) {
+                        if ( ! strpos( $role->name, $suffix )) {
+                            $role_limit = $role->name . $suffix;                 
+                        } 
+ 
                     } else {
-                        $role = get_role( UM()->roles()->get_priority_user_role( get_current_user_id()) );
-                        $role_limit = $role->name . UM()->options()->get( 'um_limit_visit_role_suffix' ); 
+                        
+                        $role_limit = UM()->options()->get( 'um_limit_visit_role_limit' );                         
                     }
 
-                    UM()->roles()->set_role( $user_id, sanitize_key( $role_limit ));
- 
+                    if( $role_limit != $role->name ) {
+
+                        UM()->roles()->set_role( $user_id, sanitize_key( $role_limit ));
+                        UM()->user()->remove_cache( $user_id );
+                        um_fetch_user( $user_id );
+                    }
+
                     wp_redirect( esc_url( $redirect_limit )); 
                     exit;
                 }
@@ -191,7 +202,8 @@ class UM_Limit_Profile_Visits {
 
         $output .= '<div class="um-field">
                     <div>Total visits ' . esc_attr( um_user( 'um_total_visited_profiles' )) . '
-                         Visits limit ' . esc_attr( um_user( 'um_view_profile_limit' )) . '</div>';
+                         Visits limit ' . esc_attr( um_user( 'um_view_profile_limit' )) . '</div>
+                    <div>User Role ' . esc_attr( UM()->roles()->get_role_name( um_user( "role" ) )) .  '</div>';
 
         $customer_orders = wc_get_orders( array( 'customer_id' => $current_user->ID,
                                                  'limit'       => 10,
