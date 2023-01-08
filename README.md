@@ -33,5 +33,7 @@ This is a Beta version under development and tests
 2. User role name added to Account page
 ### 0.6.0 Beta
 1. Remove current role if downgrading role exists
+### 0.7.0 Beta
+1. Display Account tab when there are visits
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
