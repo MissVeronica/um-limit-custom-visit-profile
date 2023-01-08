@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         0.7.0 Beta
+ * Version:         0.8.0 Beta
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -109,6 +109,7 @@ class UM_Limit_Profile_Visits {
             if ( um_user( "um_view_profile_limit" ) != $limit ) {
                 update_user_meta( $user_id, "um_view_profile_limit", $limit );
                 UM()->user()->remove_cache( $user_id );
+                um_fetch_user( $user_id );
             }
 
             if ( $allow_revisit ) {
@@ -148,6 +149,7 @@ class UM_Limit_Profile_Visits {
                     
                     $suffix = UM()->options()->get( 'um_limit_visit_role_suffix' );
                     $role = get_role( UM()->roles()->get_priority_user_role( get_current_user_id()) );
+                    $role_limit = false;
 
                     if ( ! empty( $suffix )) {
                         if ( ! strpos( $role->name, $suffix )) {
@@ -159,7 +161,7 @@ class UM_Limit_Profile_Visits {
                         $role_limit = UM()->options()->get( 'um_limit_visit_role_limit' );                         
                     }
 
-                    if ( $role_limit != $role->name ) {
+                    if ( $role_limit && $role_limit != $role->name ) {
 
                         if ( in_array( $role_limit, UM()->roles()->get_all_user_roles( $user_id ))) {
 
@@ -180,6 +182,7 @@ class UM_Limit_Profile_Visits {
 
                 update_user_meta( $user_id, "um_total_visited_profiles", $total_visited );
                 UM()->user()->remove_cache( $user_id );
+                um_fetch_user( $user_id );
 
                 if ( $allow_revisit ) {
                     $wpdb->insert( $wpdb->prefix . 'custom_visited_profiles', 
@@ -217,14 +220,14 @@ class UM_Limit_Profile_Visits {
         $output .= '<div class="um-field">
                     <div>Total visits ' . esc_attr( um_user( 'um_total_visited_profiles' )) . '
                          Visits limit ' . esc_attr( um_user( 'um_view_profile_limit' )) . '</div>
-                    <div>User Role ' . esc_attr( UM()->roles()->get_role_name( um_user( "role" ) )) .  '</div>';
+                    <div>User Role ' . esc_attr( UM()->roles()->get_role_name( um_user( "role" ) )) . '</div>';
 
         $customer_orders = wc_get_orders( array( 'customer_id' => $current_user->ID,
                                                  'limit'       => 10,
                                                  'orderby'     => 'date',
                                                  'order'       => 'DESC',
                                                  'status'      => array( 'wc-processing', 'wc-completed'),
-                                                 'return'      => 'ids') );    
+                                                 'return'      => 'ids' ) );    
 
         if ( ! empty( $customer_orders )) {
             
@@ -369,30 +372,30 @@ class UM_Limit_Profile_Visits {
 
         $columns['um_total_visited_profiles'] = __( 'Views', 'ultimate-member' );
         $columns['um_view_profile_limit'] = __( 'Limit', 'ultimate-member' );
+
         return $columns;
     }
     
     public function manage_users_custom_column_limit_custom_visit( $value, $column_name, $user_id ) {
-    
+
         if ( $column_name == 'um_total_visited_profiles' ) {
-    
+
             um_fetch_user( $user_id );
             $value = um_user( 'um_total_visited_profiles' );    
             if( empty( $value )) {
                 $value = 'Never';
             } 
-            um_reset_user();
         }
-    
+
         if ( $column_name == 'um_view_profile_limit' ) {
-    
+
             um_fetch_user( $user_id );
             $value = um_user( 'um_view_profile_limit' );
             if( empty( $value )) {
                 $value = '-';
             } 
-            um_reset_user();
         }
+
         return $value;
     }
 }
