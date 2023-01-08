@@ -31,5 +31,7 @@ This is a Beta version under development and tests
 ### 0.5.0 Beta
 1. Bug fix with -unpaid
 2. User role name added to Account page
+### 0.6.0 Beta
+1. Remove current role if downgrading role exists
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
