@@ -4,6 +4,13 @@ Extension to Ultimate Member to limit the subscribed user to certain amount of p
 UM Settings -> Access -> Other
 
 User status display: User Account Page
+
+## Creation of User Roles
+1. UM User Roles -> Add New -> Enter "Gold" will create the UM user role ID: um_gold
+2. UM User Roles -> Add New -> Enter "Gold unpaid" will create the UM user role ID: um_gold_unpaid
+3. Use the “User Role Editor” plugin if you want another  display name for "Gold unpaid" like "Waiting for gold payment"
+4. Name all the highest role levels accordingly for a safe realation between paid and unpaid roles.
+5. Use in this case "_unpaid" as the suffix in UM Settings -> Access -> Other -> "Limit Profile Visits - Downgrade Role Suffix"
 ## Updates
 This is a Beta version under development and tests
 ### 0.1.0 Beta 
