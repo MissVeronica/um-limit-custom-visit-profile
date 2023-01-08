@@ -35,5 +35,7 @@ This is a Beta version under development and tests
 1. Remove current role if downgrading role exists
 ### 0.7.0 Beta
 1. Display Account tab when there are visits
+### 0.8.0 Beta
+1. Loosing role fixed
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
