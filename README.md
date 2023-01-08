@@ -3,7 +3,7 @@ Extension to Ultimate Member to limit the subscribed user to certain amount of p
 ## Settings
 UM Settings -> Access -> Other
 
-User status display: User Account Page
+User status display: User Account Page tab
 
 ## Creation of User Roles
 1. UM User Roles -> Add New -> Enter "Gold" will create the UM user role ID: um_gold
