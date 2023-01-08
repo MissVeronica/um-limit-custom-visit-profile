@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         0.6.0 Beta
+ * Version:         0.7.0 Beta
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -22,7 +22,7 @@ class UM_Limit_Profile_Visits {
 
     public function __construct() {
 
-        if( is_admin()) {
+        if ( is_admin()) {
 
             add_filter( 'um_settings_structure',      array( $this, 'um_settings_structure_limit_custom_visit' ), 10, 2 );
             add_filter( 'manage_users_columns',       array( $this, 'manage_users_columns_limit_custom_visit' ));
@@ -36,10 +36,12 @@ class UM_Limit_Profile_Visits {
 
     public function um_limit_custom_visit_profile() {
 
-        $role = get_role( UM()->roles()->get_priority_user_role( get_current_user_id()) );
+        $user_id = get_current_user_id();
+
+        $role = get_role( UM()->roles()->get_priority_user_role( $user_id) );
 
         $limited_roles = UM()->options()->get( 'um_limit_visit_role_paid' );
-        if( empty( UM()->options()->get( 'um_limit_visit_role_suffix' ) )) {
+        if ( empty( UM()->options()->get( 'um_limit_visit_role_suffix' ) )) {
 
             array_push( $limited_roles, UM()->options()->get( 'um_limit_visit_role_limit' ));
 
@@ -48,7 +50,7 @@ class UM_Limit_Profile_Visits {
             $downgrade = array();
             $suffix = UM()->options()->get( 'um_limit_visit_role_suffix' );
 
-            foreach( $limited_roles as $gold_role ) {
+            foreach ( $limited_roles as $gold_role ) {
                 array_push( $downgrade, $gold_role . $suffix );
             }
 
@@ -64,10 +66,10 @@ class UM_Limit_Profile_Visits {
 
             global $wpdb;
 
-            if( ! function_exists( 'wc_get_order' )) return;
+            if ( ! function_exists( 'wc_get_order' )) return;
 
             $visiting_user_id = um_get_requested_user();
-            $user_id = get_current_user_id();
+            
             $limit = 0;
             $allow_revisit = true;
             $revisit_hours = false;
@@ -104,7 +106,7 @@ class UM_Limit_Profile_Visits {
                 }
             }
 
-            if( um_user( "um_view_profile_limit" ) != $limit ) {
+            if ( um_user( "um_view_profile_limit" ) != $limit ) {
                 update_user_meta( $user_id, "um_view_profile_limit", $limit );
                 UM()->user()->remove_cache( $user_id );
             }
@@ -140,7 +142,7 @@ class UM_Limit_Profile_Visits {
                 if ( $total_visited > $limit ) { // this visit will be past the limit
 
                     $redirect_limit = UM()->options()->get( 'um_limit_visit_user_redirect' );
-                    if( empty( $redirect_limit )) {
+                    if ( empty( $redirect_limit )) {
                         $redirect_limit = home_url();
                     }
                     
@@ -157,7 +159,7 @@ class UM_Limit_Profile_Visits {
                         $role_limit = UM()->options()->get( 'um_limit_visit_role_limit' );                         
                     }
 
-                    if( $role_limit != $role->name ) {
+                    if ( $role_limit != $role->name ) {
 
                         if ( in_array( $role_limit, UM()->roles()->get_all_user_roles( $user_id ))) {
 
@@ -190,10 +192,14 @@ class UM_Limit_Profile_Visits {
 
     public function um_limit_custom_visit_account( $tabs ) {
 
-        $tabs[800]['limit_custom_visit']['icon']        = 'um-faicon-pencil';
-        $tabs[800]['limit_custom_visit']['title']       = 'Status my profile visits';
-        $tabs[800]['limit_custom_visit']['custom']      = true;
-        $tabs[800]['limit_custom_visit']['show_button'] = false;
+        $total_visited = (int) get_user_meta( get_current_user_id(), "um_total_visited_profiles", true );
+        if ( ! empty( $total_visited )) {
+
+            $tabs[800]['limit_custom_visit']['icon']        = 'um-faicon-pencil';
+            $tabs[800]['limit_custom_visit']['title']       = 'Status my profile visits';
+            $tabs[800]['limit_custom_visit']['custom']      = true;
+            $tabs[800]['limit_custom_visit']['show_button'] = false;
+        }
 
         return $tabs;
     }
@@ -204,7 +210,7 @@ class UM_Limit_Profile_Visits {
         global $woocommerce;
         global $wpdb;
 
-        if( ! function_exists( 'wc_get_orders' )) {
+        if ( ! function_exists( 'wc_get_orders' )) {
             return '<div class="um-field">WooCommerce not active</div>';
         }
 
@@ -220,7 +226,7 @@ class UM_Limit_Profile_Visits {
                                                  'status'      => array( 'wc-processing', 'wc-completed'),
                                                  'return'      => 'ids') );    
 
-        if( ! empty( $customer_orders )) {
+        if ( ! empty( $customer_orders )) {
             
             $output .= '<h4>Order history</h4>
                         <div style="display: table; width: 98%;">
@@ -233,16 +239,16 @@ class UM_Limit_Profile_Visits {
                         </div>';
             
             $products = UM()->options()->get( 'um_limit_visit_user_products' );
-            if( empty( $products )) return;
+            if ( empty( $products )) return;
             $products = explode( ',', $products );
 
-            foreach( $customer_orders as $customer_order ) {
+            foreach ( $customer_orders as $customer_order ) {
 
                 $order = new WC_Order( $customer_order );
                 foreach ( $order->get_items() as $item ) {
 
                     if ( in_array( $item->get_product_id(), $products ) ) {
-                        if( ! empty( $order->get_date_completed() )) $myDateTime = new DateTime( $order->get_date_completed());
+                        if ( ! empty( $order->get_date_completed() )) $myDateTime = new DateTime( $order->get_date_completed());
                         else $myDateTime = new DateTime( $order->get_date_created());
 
                         $prod = new WC_Product( $item->get_product_id() );
@@ -268,12 +274,12 @@ class UM_Limit_Profile_Visits {
                                                                         ORDER BY visited_date DESC LIMIT 12", $current_user->ID ) );
         $output .= '<h4>Visit history</h4>';
 
-        if( ! empty( $visits )) {
+        if ( ! empty( $visits )) {
             
             $output .= '<div style="display: table; width: 90%;">
                         <style>img.hoverimg:hover,img.hoverimg:focus {width: 120px; height: 120px;}</style>';
 
-            foreach( $visits as $visit ) {
+            foreach ( $visits as $visit ) {
 
                 um_fetch_user( $visit->visited_user_id );
 
