@@ -37,5 +37,9 @@ This is a Beta version under development and tests
 1. Display Account tab when there are visits
 ### 0.8.0 Beta
 1. Loosing role fixed
+### 0.9.0 Beta
+1. Setting: Downgraded Role Allow Access
+2. Plugin first activation: DB table "wp_custom_visited_profiles" created
+
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
