@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         0.8.0 Beta
+ * Version:         0.9.0 
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -14,7 +14,7 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
-if ( ! class_exists( "UM" ) ) return;
+if ( ! class_exists( 'UM' ) ) return;
 
 
 class UM_Limit_Profile_Visits {
@@ -24,14 +24,44 @@ class UM_Limit_Profile_Visits {
 
         if ( is_admin()) {
 
+            register_activation_hook( __FILE__,       array( $this, 'create_plugin_database_table' ));
+
             add_filter( 'um_settings_structure',      array( $this, 'um_settings_structure_limit_custom_visit' ), 10, 2 );
             add_filter( 'manage_users_columns',       array( $this, 'manage_users_columns_limit_custom_visit' ));
             add_filter( 'manage_users_custom_column', array( $this, 'manage_users_custom_column_limit_custom_visit' ), 10, 3 );
 
         } else {
 
-            add_action( "template_redirect", array( $this, "um_limit_custom_visit_profile" ), 99999 );
+            add_action( 'template_redirect', array( $this, 'um_limit_custom_visit_profile' ), 99999 );
         }        
+    }
+
+    public function create_plugin_database_table() {
+
+        global $wpdb;
+
+        if ( $wpdb->get_var( "show tables like '{$wpdb->prefix}custom_visited_profiles'" ) != 
+                                                 $wpdb->prefix . 'custom_visited_profiles' ) {
+         
+            if ( ! function_exists( 'dbDelta' ) ) {
+                require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+            }
+        
+            if ( $wpdb->has_cap( 'collation' ) ) {
+                $collate = $wpdb->get_charset_collate();
+            } else $collate = '';
+            
+            $schema = "
+            CREATE TABLE {$wpdb->prefix}custom_visited_profiles (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                user_id integer,
+                visited_user_id integer,
+                visited_date datetime DEFAULT CURRENT_TIMESTAMP,
+                primary key (id)
+            ) $collate;";
+            
+            dbDelta( $schema );
+        }    
     }
 
     public function um_limit_custom_visit_profile() {
@@ -41,75 +71,87 @@ class UM_Limit_Profile_Visits {
         $role = get_role( UM()->roles()->get_priority_user_role( $user_id) );
 
         $limited_roles = UM()->options()->get( 'um_limit_visit_role_paid' );
-        if ( empty( UM()->options()->get( 'um_limit_visit_role_suffix' ) )) {
+        $limited_unpaid = UM()->options()->get( 'um_limit_visit_role_unpaid' );
 
-            array_push( $limited_roles, UM()->options()->get( 'um_limit_visit_role_limit' ));
+        if ( $limited_unpaid ) {
 
-        } else {
+            if ( empty( UM()->options()->get( 'um_limit_visit_role_suffix' ) )) {
 
-            $downgrade = array();
-            $suffix = UM()->options()->get( 'um_limit_visit_role_suffix' );
+                array_push( $limited_roles, UM()->options()->get( 'um_limit_visit_role_limit' ));
 
-            foreach ( $limited_roles as $gold_role ) {
-                array_push( $downgrade, $gold_role . $suffix );
+            } else {
+
+                $downgrade = array();
+                $suffix = UM()->options()->get( 'um_limit_visit_role_suffix' );
+
+                foreach ( $limited_roles as $gold_role ) {
+                    array_push( $downgrade, $gold_role . $suffix );
+                }
+
+                $limited_roles = array_merge( $limited_roles, $downgrade );
             }
-
-            $limited_roles = array_merge( $limited_roles, $downgrade );
         }
 
         if ( ! in_array(  $role->name, $limited_roles )) return;
+
+        //$products = UM()->options()->get( 'um_limit_visit_user_products' );
+        //if( empty( $products )) return;
 
         add_filter( 'um_account_content_hook_limit_custom_visit', array( $this, 'um_account_content_hook_limit_custom_visit' ));
         add_filter( 'um_account_page_default_tabs_hook',          array( $this, 'um_limit_custom_visit_account' ), 100 );
                           
         if ( ! um_is_myprofile() && um_is_core_page( "user" ) ) {
 
-            global $wpdb;
+            global $wpdb;            
 
-            if ( ! function_exists( 'wc_get_order' )) return;
-
-            $visiting_user_id = um_get_requested_user();
+            $visiting_user_id = um_get_requested_user();            
             
-            $limit = 0;
             $allow_revisit = true;
             $revisit_hours = false;
             $revisit_counts = false;
 
-            $customer_orders = get_posts( array(        // GET USER ORDERS (COMPLETED + PROCESSING)
-                        'numberposts' => -1,
-                        'meta_key'    => '_customer_user',
-                        'meta_value'  => $user_id,
-                        'post_type'   => wc_get_order_types(),
-                        'post_status' => array_keys( wc_get_is_paid_statuses() ),
-                    ) );
+            if ( function_exists( 'wc_get_order' )) {
 
-            if ( ! empty( $customer_orders ) && is_array( $customer_orders )) {
-                
-                $products = UM()->options()->get( 'um_limit_visit_user_products' );
-                if( empty( $products )) return;
-                $products = explode( ',', $products );
+                $customer_orders = get_posts( array(        // GET USER ORDERS (COMPLETED + PROCESSING)
+                            'numberposts' => -1,
+                            'meta_key'    => '_customer_user',
+                            'meta_value'  => $user_id,
+                            'post_type'   => wc_get_order_types(),
+                            'post_status' => array_keys( wc_get_is_paid_statuses() ),
+                        ) );
 
-                foreach ( $customer_orders as $customer_order ) {
+                if ( ! empty( $customer_orders ) && is_array( $customer_orders )) {
 
-                    $order = wc_get_order( $customer_order->ID );
+                    $products = explode( ',', $products );
+                    $limit = 0;
 
-                    foreach ( $order->get_items() as $item ) {
+                    foreach ( $customer_orders as $customer_order ) {
 
-                        if ( in_array( $item->get_product_id(), $products ) ) {
+                        $order = wc_get_order( $customer_order->ID );
 
-                            $prod = new WC_Product( $item->get_product_id() );
-                            if ( is_numeric( $prod->get_attribute( 'um_view_profile_limit' ) )) {
-                                $limit += absint( $prod->get_attribute( 'um_view_profile_limit' ));
+                        foreach ( $order->get_items() as $item ) {
+
+                            if ( in_array( $item->get_product_id(), $products ) ) {
+
+                                $prod = new WC_Product( $item->get_product_id() );
+                                if ( is_numeric( $prod->get_attribute( 'um_view_profile_limit' ) )) {
+                                    $limit += absint( $prod->get_attribute( 'um_view_profile_limit' ));
+                                }
                             }
-                        }
-                    }            
+                        }            
+                    }
                 }
-            }
 
-            if ( um_user( "um_view_profile_limit" ) != $limit ) {
-                update_user_meta( $user_id, "um_view_profile_limit", $limit );
-                UM()->user()->remove_cache( $user_id );
-                um_fetch_user( $user_id );
+                if ( um_user( 'um_view_profile_limit' ) != $limit ) {
+
+                    update_user_meta( $user_id, 'um_view_profile_limit', $limit );
+                    UM()->user()->remove_cache( $user_id );
+                    um_fetch_user( $user_id );
+                }
+
+            } else {
+
+                $limit = um_user( 'um_view_profile_limit' );
             }
 
             if ( $allow_revisit ) {
@@ -136,7 +178,7 @@ class UM_Limit_Profile_Visits {
 
             if ( $revisits == 0 ) { // new profile visit
 
-                $total_visited = (int) get_user_meta( $user_id, "um_total_visited_profiles", true );
+                $total_visited = (int)um_user( 'um_total_visited_profiles' );  // get_user_meta( $user_id, 'um_total_visited_profiles', true );
                 if ( empty( $total_visited )) $total_visited = 0;
                 $total_visited++;            
 
@@ -180,7 +222,7 @@ class UM_Limit_Profile_Visits {
                     exit;
                 }
 
-                update_user_meta( $user_id, "um_total_visited_profiles", $total_visited );
+                update_user_meta( $user_id, 'um_total_visited_profiles', $total_visited );
                 UM()->user()->remove_cache( $user_id );
                 um_fetch_user( $user_id );
 
@@ -195,7 +237,7 @@ class UM_Limit_Profile_Visits {
 
     public function um_limit_custom_visit_account( $tabs ) {
 
-        $total_visited = (int) get_user_meta( get_current_user_id(), "um_total_visited_profiles", true );
+        $total_visited = (int) um_user( 'um_total_visited_profiles' );  //get_user_meta( get_current_user_id(), 'um_total_visited_profiles', true );
         if ( ! empty( $total_visited )) {
 
             $tabs[800]['limit_custom_visit']['icon']        = 'um-faicon-pencil';
@@ -214,13 +256,18 @@ class UM_Limit_Profile_Visits {
         global $wpdb;
 
         if ( ! function_exists( 'wc_get_orders' )) {
-            return '<div class="um-field">WooCommerce not active</div>';
+            return '<div class="um-field">WooCommerce not active.</div>';
+        }
+
+        $products = UM()->options()->get( 'um_limit_visit_user_products' );
+        if( empty( $products )) {
+            return '<div class="um-field">No WooCommerce limit product IDs defined.</div>';
         }
 
         $output .= '<div class="um-field">
                     <div>Total visits ' . esc_attr( um_user( 'um_total_visited_profiles' )) . '
                          Visits limit ' . esc_attr( um_user( 'um_view_profile_limit' )) . '</div>
-                    <div>User Role ' . esc_attr( UM()->roles()->get_role_name( um_user( "role" ) )) . '</div>';
+                    <div>User Role ' . esc_attr( UM()->roles()->get_role_name( um_user( 'role' ) )) . '</div>';
 
         $customer_orders = wc_get_orders( array( 'customer_id' => $current_user->ID,
                                                  'limit'       => 10,
@@ -233,16 +280,14 @@ class UM_Limit_Profile_Visits {
             
             $output .= '<h4>Order history</h4>
                         <div style="display: table; width: 98%;">
-                        <div style="display: table-row; width: 100%;">
-                        <div style="display: table-cell;  padding-right: 5px;" title="order date">Date</div>
-                        <div style="display: table-cell;  text-align: center;" title="order number">Order</div>
-                        <div style="display: table-cell;  text-align: center;" title="quantity">Quantity</div>
-                        <div style="display: table-cell;  text-align: center;" title="visits limit">Limit</div>
-                        <div style="display: table-cell;  text-align: left;"   title="product name">Product</div> 
-                        </div>';
+                            <div style="display: table-row; width: 100%;">
+                                <div style="display: table-cell;  padding-right: 5px;" title="order date">Date</div>
+                                <div style="display: table-cell;  text-align: center;" title="order number">Order</div>
+                                <div style="display: table-cell;  text-align: center;" title="quantity">Quantity</div>
+                                <div style="display: table-cell;  text-align: center;" title="visits limit">Limit</div>
+                                <div style="display: table-cell;  text-align: left;"   title="product name">Product</div> 
+                            </div>';
             
-            $products = UM()->options()->get( 'um_limit_visit_user_products' );
-            if ( empty( $products )) return;
             $products = explode( ',', $products );
 
             foreach ( $customer_orders as $customer_order ) {
@@ -280,7 +325,7 @@ class UM_Limit_Profile_Visits {
         if ( ! empty( $visits )) {
             
             $output .= '<div style="display: table; width: 90%;">
-                        <style>img.hoverimg:hover,img.hoverimg:focus {width: 120px; height: 120px;}</style>';
+                            <style>img.hoverimg:hover,img.hoverimg:focus {width: 120px; height: 120px;}</style>';
 
             foreach ( $visits as $visit ) {
 
@@ -295,10 +340,10 @@ class UM_Limit_Profile_Visits {
                 }
 
                 $output .= '<div style="display: table-row; width: 100%;">
-                            <div style="display: table-cell; text-align: left;" title="date">' . esc_attr( $visit->visited_date ) . '</div>
-                            <div style="display: table-cell; text-align: left; padding-left: 10px;" title="display name">
-                            <a href="' . esc_url( um_user_profile_url() ) . '" target="_blank">' . esc_attr( um_user( 'display_name' ) ) . '</a></div>
-                            <div style="display: table-cell;width:120px">' . $profile_photo . '</div>
+                                <div style="display: table-cell; text-align: left;" title="date">' . esc_attr( $visit->visited_date ) . '</div>
+                                <div style="display: table-cell; text-align: left; padding-left: 10px;" title="display name">
+                                <a href="' . esc_url( um_user_profile_url() ) . '" target="_blank">' . esc_attr( um_user( 'display_name' ) ) . '</a></div>
+                                <div style="display: table-cell;width:120px">' . $profile_photo . '</div>
                             </div>';
             }
 
@@ -356,6 +401,13 @@ class UM_Limit_Profile_Visits {
                 'tooltip'       => __( 'Downgrade to the Role ID with this suffix to the Paid Role when profile visits equals user limit. Empty field use single Role selection.', 'ultimate-member' )
                 );
 
+        $settings_structure['access']['sections']['other']['fields'][] = array(
+                'id'            => 'um_limit_visit_role_unpaid',
+                'type'          => 'checkbox',
+                'label'         => __( 'Limit Profile Visits - Downgraded Role Allow Access', 'ultimate-member' ),
+                'size'          => 'medium',
+                'tooltip'       => __( 'Downgraded Role allow access to already paid views.', 'ultimate-member' )
+                );
                 
 /*    
         $settings_structure['access']['sections']['other']['fields'][] = array(
