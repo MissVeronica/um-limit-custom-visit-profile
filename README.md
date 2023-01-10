@@ -42,6 +42,10 @@ This is a Beta version under development and tests
 2. Downgraded Role redirect to Profile Page
 3. Plugin first activation: DB table "wp_custom_visited_profiles" created
 4. Code optimizations
+### 0.11.0 Beta
+1. Limit after new order updated for Account tab
+2. Text and headers updated incl localization
+3. Local WP date/time format
 
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
