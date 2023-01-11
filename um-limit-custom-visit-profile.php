@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         1.1.0 
+ * Version:         1.2.0 
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -266,8 +266,10 @@ class UM_Limit_Profile_Visits {
                         if ( in_array( $item->get_product_id(), $this->products ) ) {
 
                             $prod = new WC_Product( $item->get_product_id() );
-                            if ( is_numeric( $prod->get_attribute( 'um_view_profile_limit' ) )) {
-                                $limit += absint( $prod->get_attribute( 'um_view_profile_limit' ));
+                            if ( ! empty( $prod->get_attribute( 'um_view_profile_limit' ) ) && 
+                                   is_numeric( $prod->get_attribute( 'um_view_profile_limit' ) )) {
+
+                                $limit += (int)$item->get_quantity() * absint( $prod->get_attribute( 'um_view_profile_limit' ));
                             }
                         }
                     }
@@ -295,10 +297,12 @@ class UM_Limit_Profile_Visits {
 
     public function um_limit_custom_visit_account( $tabs ) {
 
-        $tabs[800]['limit_custom_visit']['icon']        = 'um-faicon-users';
-        $tabs[800]['limit_custom_visit']['title']       = __( 'Status my profile visits', 'ultimate-member' );
-        $tabs[800]['limit_custom_visit']['custom']      = true;
-        $tabs[800]['limit_custom_visit']['show_button'] = false;
+        $tabs[500]['limit_custom_visit'] = array( 
+                                        'icon'        => 'um-faicon-users',
+                                        'title'       => __( 'Status my profile visits', 'ultimate-member' ),
+                                        'custom'      => true,
+                                        'show_button' => false,
+                                        );
 
         return $tabs;
     }
@@ -353,16 +357,20 @@ class UM_Limit_Profile_Visits {
                         else $myDateTime = new DateTime( $order->get_date_created());
 
                         $prod = new WC_Product( $item->get_product_id() );
-                        $limit = (int)$item->get_quantity() * absint( $prod->get_attribute( 'um_view_profile_limit' ));
-                        $time_ago = sprintf( __( '%s ago', 'ultimate-member' ), human_time_diff( $myDateTime->getTimestamp(), current_time( 'timestamp' )) );
+                        if ( ! empty( $prod->get_attribute( 'um_view_profile_limit' ) ) && 
+                               is_numeric( $prod->get_attribute( 'um_view_profile_limit' ) )) {
 
-                        $output .= '<div style="display: table-row; width: 100%;">
-                                    <div style="display: table-cell;  text-align: left;" title="' . $time_ago . '">' . esc_attr( $myDateTime->format( $this->local_date_fmt )) . '</div>
-                                    <div style="display: table-cell;  text-align: center;">' . esc_attr( $customer_order ) . '</div>
-                                    <div style="display: table-cell;  text-align: center;">' . esc_attr( $item->get_quantity()) . '</div>
-                                    <div style="display: table-cell;  text-align: center;">' . esc_attr( $limit ) . '</div>
-                                    <div style="display: table-cell;  text-align: left;"><a href="' . esc_url( get_permalink( wc_get_page_id( 'shop' ) )) . '" target="_blank">' . esc_attr( $item->get_name()) . '</a></div>
-                                    </div>';
+                            $limit = absint( $prod->get_attribute( 'um_view_profile_limit' ));
+                            $time_ago = sprintf( __( '%s ago', 'ultimate-member' ), human_time_diff( $myDateTime->getTimestamp(), current_time( 'timestamp' )) );
+
+                            $output .= '<div style="display: table-row; width: 100%;">
+                                        <div style="display: table-cell;  text-align: left;" title="' . $time_ago . '">' . esc_attr( $myDateTime->format( $this->local_date_fmt )) . '</div>
+                                        <div style="display: table-cell;  text-align: center;">' . esc_attr( $customer_order ) . '</div>
+                                        <div style="display: table-cell;  text-align: center;">' . esc_attr( $item->get_quantity()) . '</div>
+                                        <div style="display: table-cell;  text-align: center;">' . esc_attr( $limit ) . '</div>
+                                        <div style="display: table-cell;  text-align: left;" class="um-field-value"><a href="' . esc_url( get_permalink( wc_get_page_id( 'shop' ) )) . '" target="shop">' . esc_attr( $item->get_name()) . '</a></div>
+                                        </div>';
+                        }
                     }
                 }
             }
@@ -379,7 +387,7 @@ class UM_Limit_Profile_Visits {
 
         if ( ! empty( $visits )) {            
             $output .= '<div style="display: table; width: 100%;">
-                            <style>img.hover_img:hover,img.hoverimg:focus {width: 120px; height: 120px;}</style>
+                            <style>img.hover_img:hover,img.hover_img:focus {width: 120px; height: 120px;}</style>
                             <div style="display: table-row; width: 100%;">
                                 <div style="display: table-cell; text-align:left;">' . __( 'Date', 'ultimate-member' ) . '</div>
                                 <div style="display: table-cell; text-align:left; padding-left:10px;">' . __( 'Visited', 'ultimate-member' ) . '</div>
@@ -391,7 +399,7 @@ class UM_Limit_Profile_Visits {
                 $time_ago = sprintf( __( '%s ago', 'ultimate-member' ), human_time_diff( strtotime( $visit->visited_date ), current_time( 'timestamp' )) );
 
                 if ( ! empty( um_profile( 'profile_photo' ))) {
-                    $profile_photo = '<a href="' . esc_url( um_user_profile_url() ) . '" target="_blank">
+                    $profile_photo = '<a href="' . esc_url( um_user_profile_url() ) . '" target="profile">
                                         <img class="hover_img" src="' . esc_url( UM()->uploader()->get_upload_base_url() . um_user( 'ID' ) . "/" . um_profile( 'profile_photo' )) . '" width="40px" heght="40px">
                                       </a>';
                 } else {
@@ -401,8 +409,8 @@ class UM_Limit_Profile_Visits {
 
                 $output .= '<div style="display: table-row; width: 100%;">
                                 <div style="display:table-cell; text-align:left;" title="' . $time_ago . '">' . esc_attr( date_i18n( $this->local_date_fmt, strtotime( $visit->visited_date ) ) ) . '</div>
-                                <div style="display:table-cell; text-align:left; padding-left:10px;">
-                                    <a href="' . esc_url( um_user_profile_url() ) . '" target="_blank">' . esc_attr( um_user( 'display_name' ) ) . '</a>
+                                <div style="display:table-cell; text-align:left; padding-left:10px;" class="um-field-value">
+                                    <a href="' . esc_url( um_user_profile_url() ) . '" target="profile">' . esc_attr( um_user( 'display_name' ) ) . '</a>
                                 </div>
                                 <div style="display:table-cell; text-align:left; width:120px">' . $profile_photo . '</div>
                             </div>';
