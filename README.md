@@ -14,13 +14,16 @@ User status display: User Account Page tab
 ## WooCommerce settings
 1. Add to products for purchasing profile views/visits an attribute um_view_profile_limit with number of visits
 ## Updates
-Version 1.0.0
+Version 1.0.0 from Beta
 1. Two additional columns in WP All Users: Views, Limit
 2. Roles setting: Paid roles, Downgrade roles with common suffix
 3. Paid roles are redirected to Limit Visit Profile when limit reached
 4. Downgraded Role redirect to Profile Page
 5. Display Account tab when there are visits with orders/views
 6. Plugin first activation: DB table "wp_custom_visited_profiles" created
+Version 1.1.0
+1. New icon 'um-faicon-users' Account page
+2. Date/Time hover "Time ago"
 
 ## Translations or Text changes
 Use the "Say What?" plugin with text domain ultimate-member
