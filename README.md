@@ -26,6 +26,10 @@ Version 1.1.0
 1. New icon 'um-faicon-users' Account page
 2. Date/Time hover "Time ago"
 
+Version 1.2.0
+1. Order item quantity updates
+2. Improved field formatting
+
 ## Translations or Text changes
 Use the "Say What?" plugin with text domain ultimate-member
 
