@@ -21,6 +21,7 @@ Version 1.0.0 from Beta
 4. Downgraded Role redirect to Profile Page
 5. Display Account tab when there are visits with orders/views
 6. Plugin first activation: DB table "wp_custom_visited_profiles" created
+
 Version 1.1.0
 1. New icon 'um-faicon-users' Account page
 2. Date/Time hover "Time ago"
