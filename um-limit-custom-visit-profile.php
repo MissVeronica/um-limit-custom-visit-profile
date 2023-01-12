@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         1.2.0 
+ * Version:         1.3.0 
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -353,15 +353,17 @@ class UM_Limit_Profile_Visits {
                 foreach ( $order->get_items() as $item ) {
 
                     if ( in_array( $item->get_product_id(), $this->products ) ) {
-                        if ( ! empty( $order->get_date_completed() )) $myDateTime = new DateTime( $order->get_date_completed());
-                        else $myDateTime = new DateTime( $order->get_date_created());
 
                         $prod = new WC_Product( $item->get_product_id() );
                         if ( ! empty( $prod->get_attribute( 'um_view_profile_limit' ) ) && 
                                is_numeric( $prod->get_attribute( 'um_view_profile_limit' ) )) {
 
                             $limit = absint( $prod->get_attribute( 'um_view_profile_limit' ));
-                            $time_ago = sprintf( __( '%s ago', 'ultimate-member' ), human_time_diff( $myDateTime->getTimestamp(), current_time( 'timestamp' )) );
+
+                            if ( ! empty( $order->get_date_completed() )) $myDateTime = new DateTime( $order->get_date_completed());
+                            else $myDateTime = new DateTime( $order->get_date_created());
+    
+                            $time_ago = sprintf( __( '%s ago', 'ultimate-member' ), human_time_diff( $myDateTime->getTimestamp(), time()) );
 
                             $output .= '<div style="display: table-row; width: 100%;">
                                         <div style="display: table-cell;  text-align: left;" title="' . $time_ago . '">' . esc_attr( $myDateTime->format( $this->local_date_fmt )) . '</div>
