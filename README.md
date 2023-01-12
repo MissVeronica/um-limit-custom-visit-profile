@@ -30,6 +30,9 @@ Version 1.2.0
 1. Order item quantity updates
 2. Improved field formatting
 
+Version 1.3.0
+1. Fixed "Time ago" error
+
 ## Translations or Text changes
 Use the "Say What?" plugin with text domain ultimate-member
 
