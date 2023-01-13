@@ -33,6 +33,9 @@ Version 1.2.0
 Version 1.3.0
 1. Fixed "Time ago" error
 
+Version 1.4.0
+1. Downgraded Role Redirect page setting
+
 ## Translations or Text changes
 Use the "Say What?" plugin with text domain ultimate-member
 
