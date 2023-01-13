@@ -13,6 +13,7 @@ User status display: User Account Page tab
 5. Use in this case "-unpaid" as the suffix in UM Settings -> Access -> Other -> "Limit Profile Visits - Downgrade Role Suffix"
 ## WooCommerce settings
 1. Add to products for purchasing profile views/visits an attribute um_view_profile_limit with number of visits
+2. How to change user role after subscription https://docs.ultimatemember.com/article/1493-how-to-change-user-role-after-subscription
 
 ## Customization of Members Directory
 Make local copies of the template files members-list.php and members-grid.php by reading this guide: 
