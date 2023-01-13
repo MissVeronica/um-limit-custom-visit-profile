@@ -13,6 +13,20 @@ User status display: User Account Page tab
 5. Use in this case "-unpaid" as the suffix in UM Settings -> Access -> Other -> "Limit Profile Visits - Downgrade Role Suffix"
 ## WooCommerce settings
 1. Add to products for purchasing profile views/visits an attribute um_view_profile_limit with number of visits
+
+## Customization of Members Directory
+Make local copies of the template files members-list.php and members-grid.php by reading this guide: 
+
+https://docs.ultimatemember.com/article/1516-templates-map
+
+Edit the local template files for the UM Members Directory and add the code for the "Warning red icon" <code><div>{{{user.custom_visited_warning}}}</div></code>
+
+members-list.php: add after the </a> on line 34 or any other template location
+
+members-grid.php: add after the </a> on line 44 or any other template location
+## Translations or Text changes
+Use the "Say What?" plugin with text domain ultimate-member
+
 ## Updates
 Version 1.0.0 from Beta
 1. Two additional columns in WP All Users: Views, Limit
@@ -39,18 +53,6 @@ Version 1.4.0
 Version 1.5.0
 1. Warning red icon for not paid profiles
 
-## Customization of Members Directory
-Make local copies of the template files members-list.php and members-grid.php by reading this guide: 
-
-https://docs.ultimatemember.com/article/1516-templates-map
-
-Edit the local template files for the UM Members Directory and add the code for the "Warning red icon" <code><div>{{{user.custom_visited_warning}}}</div></code>
-
-members-list.php: add after the </a> on line 34 or any other template location
-
-members-grid.php: add after the </a> on line 44 or any other template location
-## Translations or Text changes
-Use the "Say What?" plugin with text domain ultimate-member
 
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
