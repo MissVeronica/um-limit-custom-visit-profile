@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         1.3.0 
+ * Version:         1.4.0 
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -35,7 +35,7 @@ class UM_Limit_Profile_Visits {
 
             register_activation_hook( __FILE__,       array( $this, 'create_plugin_database_table' ));
 
-            add_filter( 'um_settings_structure',      array( $this, 'um_settings_structure_limit_custom_visit' ), 10, 2 );
+            add_filter( 'um_settings_structure',      array( $this, 'um_settings_structure_limit_custom_visit' ), 10, 1 );
             add_filter( 'manage_users_columns',       array( $this, 'manage_users_columns_limit_custom_visit' ));
             add_filter( 'manage_users_custom_column', array( $this, 'manage_users_custom_column_limit_custom_visit' ), 10, 3 );
 
@@ -212,7 +212,12 @@ class UM_Limit_Profile_Visits {
             } else {
 
                 if ( $this->limited_unpaid ) {
-                    $redirect_limit = um_user_profile_url();
+
+                    if( ! empty( UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' ))) {
+                        $redirect_limit = UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' );
+                    } else {
+                        $redirect_limit = um_user_profile_url();
+                    }
                 }
             }
 
@@ -221,7 +226,12 @@ class UM_Limit_Profile_Visits {
             $role_limit = UM()->options()->get( 'um_limit_visit_role_limit' );
 
             if ( $role->name == $role_limit && $this->limited_unpaid ) {
-                $redirect_limit = um_user_profile_url();
+
+                if( ! empty( UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' ))) {
+                    $redirect_limit = UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' );
+                } else {
+                    $redirect_limit = um_user_profile_url();
+                }
             } 
         }
 
@@ -326,7 +336,7 @@ class UM_Limit_Profile_Visits {
                     <div>' . sprintf( __( 'Total visits %d and the current limit is %d visits', 'ultimate-member' ), 
                                             um_user( 'um_total_visited_profiles' ), 
                                             um_user( 'um_view_profile_limit' )) . '</div>                           
-                    <div>' . sprintf( __( 'User Role is %s', 'ultimate-member' ), UM()->roles()->get_role_name( um_user( 'role' ) )) . '</div>';
+                    <div>' . sprintf( __( 'Current User Role is %s', 'ultimate-member' ), UM()->roles()->get_role_name( um_user( 'role' ) )) . '</div>';
 
         $customer_orders = wc_get_orders( array( 'customer_id' => $current_user->ID,
                                                  'limit'       => 10,
@@ -478,6 +488,14 @@ class UM_Limit_Profile_Visits {
                 'label'         => __( 'Limit Profile Visits - Downgraded Role Allow Access', 'ultimate-member' ),
                 'size'          => 'medium',
                 'tooltip'       => __( 'Downgraded Role allow access to already paid views.', 'ultimate-member' )
+                );
+
+        $settings_structure['access']['sections']['other']['fields'][] = array(
+                'id'            => 'um_limit_visit_downgrade_user_redirect',
+                'type'          => 'text',
+                'label'         => __( 'Limit Profile Visits - Redirect URL for downgraded user', 'ultimate-member' ),
+                'size'          => 'medium',
+                'tooltip'       => __( 'Redirect to URL or /page when downgraded profile visits unpaid profiles (empty field = User own Profile Page).', 'ultimate-member' )
                 );
 
 /*
