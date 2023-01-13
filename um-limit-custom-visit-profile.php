@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         1.4.0 
+ * Version:         1.5.0 
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -24,6 +24,7 @@ class UM_Limit_Profile_Visits {
     public $suffix;
     public $products;
     public $local_date_fmt;
+    public $visits_cache = false;
 
     public $allow_revisit = true;
     public $revisit_hours = false;
@@ -39,16 +40,36 @@ class UM_Limit_Profile_Visits {
             add_filter( 'manage_users_columns',       array( $this, 'manage_users_columns_limit_custom_visit' ));
             add_filter( 'manage_users_custom_column', array( $this, 'manage_users_custom_column_limit_custom_visit' ), 10, 3 );
 
+            add_filter( 'um_ajax_get_members_data',   array( $this, 'um_limit_visit_icon_alert_warning' ), 10, 2 );
+
         } else {
 
-            $this->limited_roles = UM()->options()->get( 'um_limit_visit_role_paid' );
-            $this->limited_unpaid = UM()->options()->get( 'um_limit_visit_role_unpaid' );
-            $this->suffix = UM()->options()->get( 'um_limit_visit_role_suffix' );
-            $this->products = explode( ',', UM()->options()->get( 'um_limit_visit_user_products' ) );
-            $this->local_date_fmt = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
+            add_action( 'template_redirect',          array( $this, 'main_limit_custom_visit_profile' ), 99999 );
 
-            add_action( 'template_redirect', array( $this, 'main_limit_custom_visit_profile' ), 99999 );
+            $this->local_date_fmt = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
         }
+        
+        $this->limited_roles = UM()->options()->get( 'um_limit_visit_role_paid' );
+        $this->limited_unpaid = UM()->options()->get( 'um_limit_visit_role_unpaid' );
+        $this->suffix = UM()->options()->get( 'um_limit_visit_role_suffix' );
+        $this->products = explode( ',', UM()->options()->get( 'um_limit_visit_user_products' ) );
+
+        if ( $this->limited_unpaid ) {
+
+            if ( empty( $this->suffix )) {
+                array_push( $this->limited_roles, UM()->options()->get( 'um_limit_visit_role_limit' ));
+
+            } else {
+
+                $downgrade = array();
+                foreach ( $this->limited_roles as $gold_role ) {
+                    array_push( $downgrade, $gold_role . $this->suffix );
+                }
+
+                $this->limited_roles = array_merge( $this->limited_roles, $downgrade );
+            }
+        }
+
     }
 
     public function create_plugin_database_table() {
@@ -84,22 +105,66 @@ class UM_Limit_Profile_Visits {
         $user_id = get_current_user_id();
         $role = get_role( UM()->roles()->get_priority_user_role( $user_id ) );        
 
-        if( ! $this->limit_user_role( $user_id, $role )) return;
+        if( $this->limit_user_role( $user_id, $role )) {
 
-        if( um_is_core_page( "account" ) ) {
-            $this->enable_account_status_tab();
-        }
+            if( um_is_core_page( "account" ) ) {
+                $this->enable_account_status_tab();
+            }
 
-        if ( ! um_is_myprofile() && um_is_core_page( "user" ) ) {
+            if ( ! um_is_myprofile() && um_is_core_page( "user" ) ) {
 
-            $visiting_user_id = um_get_requested_user();
-            $limit = $this->count_orders_with_limit_attribute( $user_id );
-            $revisits = $this->count_revisits( $user_id, $visiting_user_id );
+                $visiting_user_id = um_get_requested_user();
+                $limit = $this->count_orders_with_limit_attribute( $user_id );
+                $revisits = $this->count_revisits( $user_id, $visiting_user_id );
 
-            if ( $revisits == 0 ) { // new profile visit
-                $this->user_redirect_or_continue( $user_id, $visiting_user_id, $limit, $role );
+                if ( $revisits == 0 ) { // new profile visit
+                    $this->user_redirect_or_continue( $user_id, $visiting_user_id, $limit, $role );
+                }
             }
         }
+    }
+
+    public function um_limit_visit_icon_alert_warning( $data_array, $profile_card_user_id ) {
+
+        global $wpdb;
+
+        $user_id = get_current_user_id();
+        $role = get_role( UM()->roles()->get_priority_user_role( $user_id ) );
+
+        if( $this->limit_user_role( $user_id, $role )) {
+
+            if( (int)$profile_card_user_id == (int)get_current_user_id() ) {
+                $data_array['custom_visited_warning'] = '';
+
+            } else {
+
+                if( ! $this->visits_cache ) {
+
+                    $visits = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}custom_visited_profiles 
+                                                                                    WHERE user_id = %d", (int)$user_id ) );
+                    if( is_array( $visits ) && count(  $visits ) > 0 ) {
+                        foreach( $visits as $visit ) {
+                            $this->visits_cache[] = $visit->visited_user_id;
+                        }
+
+                    } else {
+
+                        $this->visits_cache = array();
+                    }        
+                }
+
+                if( in_array( $profile_card_user_id, $this->visits_cache )) {
+                    $data_array['custom_visited_warning'] = '';
+
+                } else {
+
+                    $message = sprintf( __( 'You have not yet paid for a visit to this profile: %s', 'ultimate-member' ), $data_array['display_name'] );
+                    $data_array['custom_visited_warning'] = '<i style="color:red;" class="um-faicon-exclamation-triangle" title="' . $message . '"></i>';
+                }
+            }
+        }
+
+        return $data_array;
     }
 
     public function limit_user_role( $user_id, $role ) {
@@ -107,22 +172,6 @@ class UM_Limit_Profile_Visits {
         if( empty( $user_id ) || empty( $role )) return false;
 
         $limit_user = true;
-
-        if ( $this->limited_unpaid ) {
-
-            if ( empty( $this->suffix )) {
-                array_push( $this->limited_roles, UM()->options()->get( 'um_limit_visit_role_limit' ));
-
-            } else {
-
-                $downgrade = array();
-                foreach ( $this->limited_roles as $gold_role ) {
-                    array_push( $downgrade, $gold_role . $this->suffix );
-                }
-
-                $this->limited_roles = array_merge( $this->limited_roles, $downgrade );
-            }
-        }
 
         if ( ! in_array(  $role->name, $this->limited_roles )) $limit_user = false;
         if( empty( $this->products )) $limit_user = false;
