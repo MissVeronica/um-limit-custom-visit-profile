@@ -22,9 +22,9 @@ https://docs.ultimatemember.com/article/1516-templates-map
 
 Edit the local template files for the UM Members Directory and add the code for the "Warning red icon" <code><div>{{{user.custom_visited_warning}}}</div></code>
 
-members-list.php: add after the "/a>" on line 34 or any other template location
+members-list.php: add after the "/a>" on line 34 or at any other template location
 
-members-grid.php: add after the "/a>" on line 44 or any other template location
+members-grid.php: add after the "/a>" on line 44 or at any other template location
 ## Translations or Text changes
 Use the "Say What?" plugin with text domain ultimate-member
 
