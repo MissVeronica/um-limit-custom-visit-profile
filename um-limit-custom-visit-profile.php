@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Ultimate Member - Limit Profile Visits
  * Description:     Extension to Ultimate Member to limit the subscribed user to certain amount of profile views.
- * Version:         1.5.0 
+ * Version:         1.5.1 
  * Requires PHP:    7.4
  * Author:          Miss Veronica
  * License:         GPL v2 or later
@@ -16,7 +16,6 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 if ( ! class_exists( 'UM' ) ) return;
 
-
 class UM_Limit_Profile_Visits {
 
     public $limited_roles;
@@ -24,10 +23,12 @@ class UM_Limit_Profile_Visits {
     public $suffix;
     public $products;
     public $local_date_fmt;
-    public $visits_cache = false;
 
-    public $allow_revisit = true;
-    public $revisit_hours = false;
+    public $visits_cache = false;
+    public $blinking = false;
+
+    public $allow_revisit  = true;
+    public $revisit_hours  = false;
     public $revisit_counts = false;
 
     public function __construct() {
@@ -48,11 +49,11 @@ class UM_Limit_Profile_Visits {
 
             $this->local_date_fmt = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
         }
-        
-        $this->limited_roles = UM()->options()->get( 'um_limit_visit_role_paid' );
+
+        $this->limited_roles  = UM()->options()->get( 'um_limit_visit_role_paid' );
         $this->limited_unpaid = UM()->options()->get( 'um_limit_visit_role_unpaid' );
-        $this->suffix = UM()->options()->get( 'um_limit_visit_role_suffix' );
-        $this->products = explode( ',', UM()->options()->get( 'um_limit_visit_user_products' ) );
+        $this->suffix         = UM()->options()->get( 'um_limit_visit_role_suffix' );
+        $this->products       = explode( ',', UM()->options()->get( 'um_limit_visit_user_products' ) );
 
         if ( $this->limited_unpaid ) {
 
@@ -105,9 +106,9 @@ class UM_Limit_Profile_Visits {
         $user_id = get_current_user_id();
         $role = get_role( UM()->roles()->get_priority_user_role( $user_id ) );        
 
-        if( $this->limit_user_role( $user_id, $role )) {
+        if ( $this->limit_user_role( $user_id, $role )) {
 
-            if( um_is_core_page( "account" ) ) {
+            if ( um_is_core_page( "account" ) ) {
                 $this->enable_account_status_tab();
             }
 
@@ -131,18 +132,20 @@ class UM_Limit_Profile_Visits {
         $user_id = get_current_user_id();
         $role = get_role( UM()->roles()->get_priority_user_role( $user_id ) );
 
-        if( $this->limit_user_role( $user_id, $role )) {
+        if ( $this->limit_user_role( $user_id, $role )) {
 
-            if( (int)$profile_card_user_id == (int)get_current_user_id() ) {
+            if ( (int)$profile_card_user_id == (int)get_current_user_id() ) {
                 $data_array['custom_visited_warning'] = '';
 
             } else {
 
-                if( ! $this->visits_cache ) {
+                if ( ! $this->visits_cache ) {
 
-                    $visits = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}custom_visited_profiles 
-                                                                                    WHERE user_id = %d", (int)$user_id ) );
-                    if( is_array( $visits ) && count(  $visits ) > 0 ) {
+                    $visits = $wpdb->get_results( $wpdb->prepare( "SELECT * 
+                                                                   FROM {$wpdb->prefix}custom_visited_profiles 
+                                                                   WHERE user_id = %d", (int)$user_id ) );
+
+                    if ( is_array( $visits ) && count(  $visits ) > 0 ) {
                         foreach( $visits as $visit ) {
                             $this->visits_cache[] = $visit->visited_user_id;
                         }
@@ -153,13 +156,16 @@ class UM_Limit_Profile_Visits {
                     }        
                 }
 
-                if( in_array( $profile_card_user_id, $this->visits_cache )) {
-                    $data_array['custom_visited_warning'] = '';
+                $data_array['custom_visited_warning'] = '';
+                if ( ! in_array( $profile_card_user_id, $this->visits_cache )) {
 
-                } else {
+                    if( ! $this->blinking ) {
+                        $this->blinking = true;
+                        $data_array['custom_visited_warning'] = '<style>.blinking { animation: blinker 0.7s linear infinite;} @keyframes blinker { 50% { opacity: 0; }}</style>';
+                    }
 
                     $message = sprintf( __( 'You have not yet paid for a visit to this profile: %s', 'ultimate-member' ), $data_array['display_name'] );
-                    $data_array['custom_visited_warning'] = '<i style="color:red;" class="um-faicon-exclamation-triangle" title="' . $message . '"></i>';
+                    $data_array['custom_visited_warning'] .= '<i style="color:red; padding-left:5px" class="um-faicon-exclamation-triangle blinking" title="' . $message . '"></i>';
                 }
             }
         }
@@ -169,12 +175,12 @@ class UM_Limit_Profile_Visits {
 
     public function limit_user_role( $user_id, $role ) {
 
-        if( empty( $user_id ) || empty( $role )) return false;
+        if ( empty( $user_id ) || empty( $role )) return false;
 
         $limit_user = true;
 
         if ( ! in_array(  $role->name, $this->limited_roles )) $limit_user = false;
-        if( empty( $this->products )) $limit_user = false;
+        if ( empty( $this->products )) $limit_user = false;
 
         return $limit_user;
     }
@@ -222,7 +228,8 @@ class UM_Limit_Profile_Visits {
 
         if ( $this->allow_revisit ) {
 
-            $select =  "SELECT count(*) AS views FROM {$wpdb->prefix}custom_visited_profiles 
+            $select =  "SELECT count(*) AS views 
+                        FROM {$wpdb->prefix}custom_visited_profiles 
                         WHERE user_id = %d  
                         AND visited_user_id = %d
                         AND visited_date >= %s";
@@ -262,7 +269,7 @@ class UM_Limit_Profile_Visits {
 
                 if ( $this->limited_unpaid ) {
 
-                    if( ! empty( UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' ))) {
+                    if ( ! empty( UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' ))) {
                         $redirect_limit = UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' );
                     } else {
                         $redirect_limit = um_user_profile_url();
@@ -276,7 +283,7 @@ class UM_Limit_Profile_Visits {
 
             if ( $role->name == $role_limit && $this->limited_unpaid ) {
 
-                if( ! empty( UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' ))) {
+                if ( ! empty( UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' ))) {
                     $redirect_limit = UM()->options()->get( 'um_limit_visit_downgrade_user_redirect' );
                 } else {
                     $redirect_limit = um_user_profile_url();
@@ -403,7 +410,7 @@ class UM_Limit_Profile_Visits {
                                 <div style="display: table-cell;  text-align: center;">' . __( 'Order', 'ultimate-member' ) . '</div>
                                 <div style="display: table-cell;  text-align: center;">' . __( 'Quantity', 'ultimate-member' ) . '</div>
                                 <div style="display: table-cell;  text-align: center;">' . __( 'Limit', 'ultimate-member' ) . '</div>
-                                <div style="display: table-cell;  text-align: left;">' . __( 'Product', 'ultimate-member' ) . '</div> 
+                                <div style="display: table-cell;  text-align: left;">' .   __( 'Product', 'ultimate-member' ) . '</div> 
                             </div>';
 
             foreach ( $customer_orders as $customer_order ) {
@@ -419,17 +426,19 @@ class UM_Limit_Profile_Visits {
 
                             $limit = absint( $prod->get_attribute( 'um_view_profile_limit' ));
 
-                            if ( ! empty( $order->get_date_completed() )) $myDateTime = new DateTime( $order->get_date_completed());
-                            else $myDateTime = new DateTime( $order->get_date_created());
-    
-                            $time_ago = sprintf( __( '%s ago', 'ultimate-member' ), human_time_diff( $myDateTime->getTimestamp(), time()) );
+                            if ( ! empty( $order->get_date_completed() )) $orderDateTime = new DateTime( $order->get_date_completed());
+                            else $orderDateTime = new DateTime( $order->get_date_created());
+
+                            $time_ago = sprintf( __( 'This purchase was made %s ago', 'ultimate-member' ), human_time_diff( $orderDateTime->getTimestamp(), time()) );
 
                             $output .= '<div style="display: table-row; width: 100%;">
-                                        <div style="display: table-cell;  text-align: left;" title="' . $time_ago . '">' . esc_attr( $myDateTime->format( $this->local_date_fmt )) . '</div>
-                                        <div style="display: table-cell;  text-align: center;">' . esc_attr( $customer_order ) . '</div>
-                                        <div style="display: table-cell;  text-align: center;">' . esc_attr( $item->get_quantity()) . '</div>
-                                        <div style="display: table-cell;  text-align: center;">' . esc_attr( $limit ) . '</div>
-                                        <div style="display: table-cell;  text-align: left;" class="um-field-value"><a href="' . esc_url( get_permalink( wc_get_page_id( 'shop' ) )) . '" target="shop">' . esc_attr( $item->get_name()) . '</a></div>
+                                            <div style="display: table-cell;  text-align: left;" title="' . $time_ago . '">' . esc_attr( $orderDateTime->format( $this->local_date_fmt )) . '</div>
+                                            <div style="display: table-cell;  text-align: center;">' . esc_attr( $customer_order ) . '</div>
+                                            <div style="display: table-cell;  text-align: center;">' . esc_attr( $item->get_quantity()) . '</div>
+                                            <div style="display: table-cell;  text-align: center;">' . esc_attr( $limit ) . '</div>
+                                            <div style="display: table-cell;  text-align: left;" class="um-field-value">
+                                                <a href="' . esc_url( get_permalink( wc_get_page_id( 'shop' ) )) . '" target="shop">' . esc_attr( $item->get_name()) . '</a>
+                                            </div>
                                         </div>';
                         }
                     }
@@ -440,9 +449,11 @@ class UM_Limit_Profile_Visits {
 
         } else $output .= '<div>' . __( 'No orders found', 'ultimate-member' ) . '</div>';
 
-        $visits = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}custom_visited_profiles 
-                                                                        WHERE user_id = %d  
-                                                                        ORDER BY visited_date DESC LIMIT %d", $current_user->ID, 12 ) );
+        $visits = $wpdb->get_results( $wpdb->prepare( "SELECT * 
+                                                       FROM {$wpdb->prefix}custom_visited_profiles 
+                                                       WHERE user_id = %d  
+                                                       ORDER BY visited_date DESC 
+                                                       LIMIT %d", $current_user->ID, 12 ) );
 
         $output .= '<h4>' .  __( 'Visit history', 'ultimate-member' ) . '</h4>';
 
@@ -450,14 +461,14 @@ class UM_Limit_Profile_Visits {
             $output .= '<div style="display: table; width: 100%;">
                             <style>img.hover_img:hover,img.hover_img:focus {width: 120px; height: 120px;}</style>
                             <div style="display: table-row; width: 100%;">
-                                <div style="display: table-cell; text-align:left;">' . __( 'Date', 'ultimate-member' ) . '</div>
+                                <div style="display: table-cell; text-align:left;">' .                    __( 'Date', 'ultimate-member' ) . '</div>
                                 <div style="display: table-cell; text-align:left; padding-left:10px;">' . __( 'Visited', 'ultimate-member' ) . '</div>
-                                <div style="display: table-cell; text-align:left; width:120px">' . __( 'Photo', 'ultimate-member' ) . '</div>
+                                <div style="display: table-cell; text-align:left; width:120px">' .        __( 'Photo', 'ultimate-member' ) . '</div>
                             </div>';
 
             foreach ( $visits as $visit ) {
                 um_fetch_user( $visit->visited_user_id );
-                $time_ago = sprintf( __( '%s ago', 'ultimate-member' ), human_time_diff( strtotime( $visit->visited_date ), current_time( 'timestamp' )) );
+                $time_ago = sprintf( __( 'Your first visit to this profile was %s ago', 'ultimate-member' ), human_time_diff( strtotime( $visit->visited_date ), current_time( 'timestamp' )) );
 
                 if ( ! empty( um_profile( 'profile_photo' ))) {
                     $profile_photo = '<a href="' . esc_url( um_user_profile_url() ) . '" target="profile">
@@ -561,7 +572,7 @@ class UM_Limit_Profile_Visits {
     public function manage_users_columns_limit_custom_visit( $columns ) {
 
         $columns['um_total_visited_profiles'] = __( 'Views', 'ultimate-member' );
-        $columns['um_view_profile_limit'] = __( 'Limit', 'ultimate-member' );
+        $columns['um_view_profile_limit'] =     __( 'Limit', 'ultimate-member' );
 
         return $columns;
     }
@@ -572,7 +583,7 @@ class UM_Limit_Profile_Visits {
 
             um_fetch_user( $user_id );
             $value = um_user( 'um_total_visited_profiles' );    
-            if( empty( $value )) {
+            if ( empty( $value )) {
                 $value = __( 'Never', 'ultimate-member' );
             } 
         }
@@ -581,7 +592,7 @@ class UM_Limit_Profile_Visits {
 
             um_fetch_user( $user_id );
             $value = um_user( 'um_view_profile_limit' );
-            if( empty( $value )) {
+            if ( empty( $value )) {
                 $value = '-';
             } 
         }
