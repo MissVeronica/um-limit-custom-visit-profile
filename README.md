@@ -53,6 +53,9 @@ Version 1.4.0
 Version 1.5.0
 1. Warning red icon for not paid profiles
 
+Version 1.5.1
+1. Text updates
+2. Red warning icon blinking
 
 ## Installation
 Download the zip file and install as a WP Plugin, activate the plugin.
